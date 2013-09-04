@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/topojson.v1.min.js"></script>
+<style>
+
+svg {
+  height: 500px;
+  overflow-y: hidden;
+}
+
+.graticule {
+  fill: none;
+  stroke: #bbb;
+  stroke-opacity: .5;
+  stroke-width: .5px;
+}
+
+.land {
+  fill: #333;
+}
+
+.boundary {
+  fill: none;
+  stroke: #fff;
+  stroke-width: .5px;
+}
+
+</style>
+</head>
+<body>
+<script type="text/javascript">
+
+var width = 960,
+    height = 800;
+
+var projection = d3.geo.mercator()
+    .scale((width + 1) / 2 / Math.PI)
+    .translate([width / 2, height / 2])
+    .precision(.1);
+
+var path = d3.geo.path()
+    .projection(projection);
+
+var graticule = d3.geo.graticule();
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+    
+var g = d3.select("svg").append("g")
+    .attr("transform", "translate(0 -100)");
+
+g.append("path")
+    .datum(graticule)
+    .attr("class", "graticule")
+    .attr("d", path);
+    
+d3.json("/world-50m.json", function(error, world) {
+  g.insert("path", ".graticule")
+      .datum(topojson.feature(world, world.objects.land))
+      .attr("class", "land")
+      .attr("d", path);
+
+  g.insert("path", ".graticule")
+      .datum(topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; }))
+      .attr("class", "boundary")
+      .attr("d", path);
+});
+
+d3.select(self.frameElement).style("height", height + "px");
+
+var data = [];
+(function renderPoints() {
+  tweakData();
+
+  var circles = g.selectAll("circle")
+    .data(data, function(d) { return d; });
+
+  circles.enter()
+      .append('circle')
+      .attr('fill', 'red')
+      .attr('cx', function(d) {
+        return projection(d)[0];
+      })
+      .attr('cy', function(d) {
+        return projection(d)[1];
+      })
+      .attr('class', 'new')
+      .attr('r', 0)
+      .transition().duration(1000).delay(1000)
+      .attr('r', 10)
+      .transition().duration(800)
+      .attr('fill', 'orange')
+      .attr('r', 6);
+
+  circles.exit()
+      .transition()
+      .attr('fill', 'green')
+      .transition()
+      .delay(300)
+      .duration(800)
+      .attr('r', 0)
+      .remove();
+
+  setTimeout(renderPoints, 2000);
+})();
+
+function tweakData() {
+  data.splice(0, Math.min(data.length, Math.random()*6));
+
+  for ( var i = 0; i < Math.random() * 10; i++ ) {
+    var lat = (parseInt(Math.random() * 160) - 80),
+        lon = (parseInt(Math.random() * 360) - 180);
+
+    data.push([lon, lat]);
+  }
+}
+
+</script>
+</body>
+</html>
